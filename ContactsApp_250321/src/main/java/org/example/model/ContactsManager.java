@@ -8,6 +8,7 @@ import org.example.model.data.PersonalContact;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,10 +36,16 @@ public class ContactsManager {
     }
 
     public List<Contact> getContactsContainingName(String name) {
+        if (name.isEmpty()) {
+            return Collections.unmodifiableList(mContactList);
+        }
         return mContactList.stream().filter(x -> x.getName().contains(name)).toList();
     }
 
     public List<Contact> getContactsContainingPhoneNo(String phoneNo) {
+        if (phoneNo.isEmpty()) {
+            return Collections.unmodifiableList(mContactList);
+        }
         return mContactList.stream().filter(x -> x.getPhoneNumber().contains(phoneNo)).toList();
     }
 

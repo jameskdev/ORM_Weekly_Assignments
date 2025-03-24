@@ -1,6 +1,7 @@
 package org.example.controller;
 
 import org.example.model.ContactsManager;
+import org.example.model.data.Contact;
 import org.example.view.ContactsView;
 
 import javax.swing.*;
@@ -34,10 +35,20 @@ public class ContactsController implements  IContactsController{
     }
 
     public void dataUpdated() {
-        if (SwingUtilities.isEventDispatchThread()) {
-
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> {
+                mView.setContactInfo("");
+                mListModel.clear();
+                for (Contact c: mContactsManager.getContactsContainingName("")) {
+                    mListModel.addElement(new ContactsView.ListViewItem(c.getUniqueId(), c.getName(), c.getPhoneNumber()));
+                }
+            });
         } else {
-
+            mView.setContactInfo("");
+            mListModel.clear();
+            for (Contact c: mContactsManager.getContactsContainingName("")) {
+                mListModel.addElement(new ContactsView.ListViewItem(c.getUniqueId(), c.getName(), c.getPhoneNumber()));
+            }
         }
     }
 
@@ -58,5 +69,6 @@ public class ContactsController implements  IContactsController{
         } else {
             mContactsManager.addPersonalContact(name, phoneNo, additionalInfo);
         }
+        dataUpdated();
     }
 }

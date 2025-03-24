@@ -26,7 +26,7 @@ public class ContactsView {
     private final JButton mImportJsonFile;
     private final JButton mSaveToJsonFile;
     private final ButtonGroup mSearchByGroup;
-    private final IContactsController mController;
+    private IContactsController mController;
 
     public static class ListViewItem {
         private final String mUniqueId;
@@ -37,6 +37,11 @@ public class ContactsView {
             mUniqueId = uniqueId;
             mName = name;
             mPhoneNo = phone;
+        }
+
+        @Override
+        public String toString() {
+            return "Name: " + getName() + ", Phone Number: " + getPhoneNo();
         }
 
         public String getUniqueId() {
@@ -52,7 +57,7 @@ public class ContactsView {
         }
     }
 
-    public ContactsView(IContactsController controller) {
+    public ContactsView() {
         mFrame = new JFrame();
 
         mPanel = new JPanel();
@@ -98,7 +103,31 @@ public class ContactsView {
         mImportJsonFile = new JButton();
         mImportJsonFile.setText("Button");
 
-        mController = controller;
+        mController = new IContactsController() {
+            @Override
+            public void onFileSelected(String filePath) {
+
+            }
+
+            @Override
+            public void onSearch(String query, int type) {
+
+            }
+
+            @Override
+            public void onItemSelected(String selectedItem) {
+
+            }
+
+            @Override
+            public void onItemAdded(String name, String phoneNo, int type, String additionalInfo) {
+
+            }
+        };
+    }
+
+    public void setController(IContactsController cc) {
+        mController = cc;
     }
 
     /**
@@ -220,9 +249,9 @@ public class ContactsView {
         gbc.gridwidth = 4;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         mPanel.add(mImportJsonFile, gbc);
-        mAddButton.addActionListener(e -> {
+        mImportJsonFile.addActionListener(e -> {
             JFileChooser jfc = new JFileChooser();
-            jfc.addChoosableFileFilter(new FileNameExtensionFilter(".json"));
+            jfc.addChoosableFileFilter(new FileNameExtensionFilter("JSON File", ".json"));
             if (jfc.showOpenDialog(mFrame) == JFileChooser.APPROVE_OPTION) {
                 try {
                     mController.onFileSelected(jfc.getSelectedFile().getCanonicalPath());

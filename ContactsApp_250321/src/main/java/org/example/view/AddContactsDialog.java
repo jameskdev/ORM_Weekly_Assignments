@@ -42,6 +42,7 @@ public class AddContactsDialog extends JDialog {
         mDialogButtonPanel = new JPanel();
         mCancelButton = new JButton();
         mOKButton = new JButton();
+        mCallback = cb;
 
         createDialogUI();
     }
