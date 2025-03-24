@@ -10,10 +10,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ContactsManager {
     private final List<Contact> mContactList;
+    private final Object mListWriteLock = new Object();
 
     public enum FileIoStatus {
         FILE_IO_SUCCESS,
@@ -28,11 +30,15 @@ public class ContactsManager {
     }
 
     public boolean addBusinessContact(String name, String phoneNumber, String companyName) {
-        return mContactList.add(new BusinessContact(name, phoneNumber, companyName));
+        synchronized (mListWriteLock) {
+            return mContactList.add(new BusinessContact(name, phoneNumber, companyName));
+        }
     }
 
     public boolean addPersonalContact(String name, String phoneNumber, String relationship) {
-        return mContactList.add(new PersonalContact(name, phoneNumber, relationship));
+        synchronized (mListWriteLock) {
+            return mContactList.add(new PersonalContact(name, phoneNumber, relationship));
+        }
     }
 
     public List<Contact> getContactsContainingName(String name) {
@@ -78,7 +84,9 @@ public class ContactsManager {
     }
 
     public void clearCurrentContactList() {
-        mContactList.clear();
+        synchronized (mListWriteLock) {
+            mContactList.clear();
+        }
     }
 
     public FileIoStatus readFromFile(String path) {
@@ -112,12 +120,37 @@ public class ContactsManager {
             return FileIoStatus.FILE_OTHER_IO_ERROR;
         }
         if (!readList.isEmpty()) {
-            mContactList.clear();
-            mContactList.addAll(readList);
+            synchronized (mListWriteLock) {
+                mContactList.clear();
+                mContactList.addAll(readList);
+            }
         } else {
             return FileIoStatus.FILE_IS_EMPTY;
         }
         return FileIoStatus.FILE_IO_SUCCESS;
+    }
+
+    public Optional<Contact> getContactById(String uid) {
+        for (Contact c: mContactList) {
+            if (c.getUniqueId().equalsIgnoreCase(uid)) {
+                return Optional.of(c);
+            }
+        }
+        return Optional.empty();
+    }
+
+    public void deleteItem(String name) {
+        synchronized (mListWriteLock) {
+            int index = -1;
+            for (int i = 0; i < mContactList.size(); i++) {
+                if (mContactList.get(i).getUniqueId().equalsIgnoreCase(name)) {
+                    index = i;
+                }
+            }
+            if (index > -1) {
+                mContactList.remove(index);
+            }
+        }
     }
 
     public FileIoStatus saveContactList(String path) {
@@ -131,19 +164,21 @@ public class ContactsManager {
         }
 
         JsonArray ja = new JsonArray();
-        mContactList.forEach(x -> {
-            JsonObject item = new JsonObject();
-            if (x instanceof BusinessContact xb) {
-                item.addProperty("mName", xb.getName());
-                item.addProperty("mPhoneNumber", xb.getPhoneNumber());
-                item.addProperty("mCompanyName", xb.getCompanyName());
-            } else if (x instanceof PersonalContact xp) {
-                item.addProperty("mName", xp.getName());
-                item.addProperty("mPhoneNumber", xp.getPhoneNumber());
-                item.addProperty("mRelationship", xp.getRelationship());
-            }
-            ja.add(item);
-        });
+        synchronized (mListWriteLock) { // While this doesn't really modify the data, a lock is used in order to ensure data consistency.
+            mContactList.forEach(x -> {
+                JsonObject item = new JsonObject();
+                if (x instanceof BusinessContact xb) {
+                    item.addProperty("mName", xb.getName());
+                    item.addProperty("mPhoneNumber", xb.getPhoneNumber());
+                    item.addProperty("mCompanyName", xb.getCompanyName());
+                } else if (x instanceof PersonalContact xp) {
+                    item.addProperty("mName", xp.getName());
+                    item.addProperty("mPhoneNumber", xp.getPhoneNumber());
+                    item.addProperty("mRelationship", xp.getRelationship());
+                }
+                ja.add(item);
+            });
+        }
         try (FileOutputStream fos = new FileOutputStream(file)) {
             byte[] bb = ja.toString().getBytes(StandardCharsets.UTF_8);
             fos.write(bb);

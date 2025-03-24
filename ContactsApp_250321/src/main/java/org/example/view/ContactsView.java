@@ -4,6 +4,8 @@ import org.example.controller.ContactsController;
 import org.example.controller.IContactsController;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.IOException;
@@ -58,12 +60,12 @@ public class ContactsView {
     }
 
     public ContactsView() {
-        mFrame = new JFrame();
+        mFrame = new JFrame("Contacts App (Oreumi Week 3 Project)");
 
         mPanel = new JPanel();
 
         mCurrentFileStatusLabel = new JLabel();
-        mCurrentFileStatusLabel.setText("Label");
+        mCurrentFileStatusLabel.setText("A new contact");
 
         mSearchForLabel = new JLabel();
         mSearchForLabel.setText("Search for: ");
@@ -92,42 +94,57 @@ public class ContactsView {
         mContactInfo = new JTextArea();
 
         mDeleteButton = new JButton();
-        mDeleteButton.setText("Button");
+        mDeleteButton.setText("Delete");
 
         mAddButton = new JButton();
-        mAddButton.setText("Button");
+        mAddButton.setText("Add new contact");
 
         mSaveToJsonFile = new JButton();
-        mSaveToJsonFile.setText("Button");
+        mSaveToJsonFile.setText("Save current contact list");
 
         mImportJsonFile = new JButton();
-        mImportJsonFile.setText("Button");
+        mImportJsonFile.setText("Open saved contact file");
 
         mController = new IContactsController() {
             @Override
             public void onFileSelected(String filePath) {
+            }
 
+            @Override
+            public void onFileSaveSelected(String filePath) {
+            }
+
+            public void onItemDeleted(String name) {
             }
 
             @Override
             public void onSearch(String query, int type) {
-
             }
 
             @Override
             public void onItemSelected(String selectedItem) {
-
             }
 
             @Override
             public void onItemAdded(String name, String phoneNo, int type, String additionalInfo) {
-
             }
         };
     }
 
     public void setController(IContactsController cc) {
         mController = cc;
+    }
+
+    public void setFileNameDisplay(String name) {
+        mCurrentFileStatusLabel.setText(name);
+    }
+
+    private void searchBoxEntered() {
+        if (mSearchByName.isSelected()) {
+            mController.onSearch(mSearchBox.getText(), 0);
+        } else {
+            mController.onSearch(mSearchBox.getText(), 1);
+        }
     }
 
     /**
@@ -164,6 +181,22 @@ public class ContactsView {
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         mPanel.add(mSearchBox, gbc);
+        mSearchBox.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                searchBoxEntered();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                searchBoxEntered();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                // Seriously, why does this even exist?
+            }
+        });
 
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -187,12 +220,13 @@ public class ContactsView {
 
         mSearchByGroup.add(mSearchByName);
         mSearchByGroup.add(mSearchByPhoneNumber);
+        mSearchByName.setSelected(true);
 
         gbc = new GridBagConstraints();
         gbc.gridx = 2;
         gbc.gridy = 4;
         gbc.gridwidth = 2;
-        gbc.weighty = 0.7;
+        gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         mPanel.add(mContactList, gbc);
 
@@ -209,9 +243,10 @@ public class ContactsView {
         gbc.gridx = 2;
         gbc.gridy = 5;
         gbc.gridwidth = 2;
-        gbc.weighty = 0.3;
+        gbc.weighty = 0.0;
         gbc.fill = GridBagConstraints.BOTH;
         mPanel.add(mContactInfo, gbc);
+        mContactInfo.setRows(10);
 
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -232,6 +267,11 @@ public class ContactsView {
         gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         mPanel.add(mDeleteButton, gbc);
+        mDeleteButton.addActionListener(e -> {
+            if (!mContactList.isSelectionEmpty()) {
+                mController.onItemDeleted(mContactList.getSelectedValue().getUniqueId());
+            }
+        });
 
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -253,10 +293,7 @@ public class ContactsView {
             JFileChooser jfc = new JFileChooser();
             jfc.addChoosableFileFilter(new FileNameExtensionFilter("JSON File", ".json"));
             if (jfc.showOpenDialog(mFrame) == JFileChooser.APPROVE_OPTION) {
-                try {
-                    mController.onFileSelected(jfc.getSelectedFile().getCanonicalPath());
-                } catch (IOException ignored) {
-                }
+                mController.onFileSelected(jfc.getSelectedFile().getAbsolutePath());
             }
         });
 
@@ -266,6 +303,13 @@ public class ContactsView {
         gbc.gridwidth = 4;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         mPanel.add(mSaveToJsonFile, gbc);
+        mSaveToJsonFile.addActionListener(e -> {
+            JFileChooser jfc = new JFileChooser();
+            jfc.addChoosableFileFilter(new FileNameExtensionFilter("JSON File", ".json"));
+            if (jfc.showSaveDialog(mFrame) == JFileChooser.APPROVE_OPTION) {
+                mController.onFileSaveSelected(jfc.getSelectedFile().getAbsolutePath());
+            }
+        });
 
         mFrame.setMinimumSize(new Dimension(700, 700));
         mFrame.pack();
